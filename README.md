@@ -48,36 +48,29 @@ Speedup scales with drawer count. More chunks = more embedding work = bigger GPU
 ## Installation
 
 ```bash
-# Clone this fork
+pip install mempalace-gpu
+```
+
+That's it. Works on NVIDIA, AMD, and Apple Silicon — GPU is auto-detected.
+
+### AMD (ROCm) note
+
+AMD GPUs need the ROCm version of PyTorch installed first:
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/rocm6.2
+pip install mempalace-gpu
+```
+
+### Your data is safe
+
+Installing or upgrading `mempalace-gpu` only replaces the Python code. Your mined data lives in `~/.mempalace/palace/` (ChromaDB files) and is never touched. Existing palaces remain fully compatible.
+
+### Development install
+
+```bash
 git clone https://github.com/phobicdotno/mempalace-gpu.git
 cd mempalace-gpu
-```
-
-### NVIDIA (CUDA)
-
-```bash
-pip install -e ".[gpu]"
-```
-
-### AMD (ROCm)
-
-```bash
-# Install PyTorch with ROCm first
-pip install torch --index-url https://download.pytorch.org/whl/rocm6.2
-# Then install mempalace with GPU extras
-pip install -e ".[gpu]"
-```
-
-### Apple Silicon (MPS)
-
-```bash
-# PyTorch ships with MPS support on macOS by default
-pip install -e ".[gpu]"
-```
-
-### CPU only (still gets batch processing)
-
-```bash
 pip install -e .
 ```
 
