@@ -792,7 +792,7 @@ def handle_request(request):
             "result": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {"tools": {}},
-                "serverInfo": {"name": "mempalace-gpu", "version": "3.1.0"},
+                "serverInfo": {"name": "mempalace-gpu", "version": "3.2.0"},
             },
         }
     elif method == "notifications/initialized":

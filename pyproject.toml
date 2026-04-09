@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mempalace-gpu"
-version = "3.1.0"
+version = "3.2.0"
 description = "GPU-accelerated fork of mempalace — NVIDIA CUDA, AMD ROCm, Apple MPS. 3-6x faster mining."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -32,6 +32,8 @@ classifiers = [
 dependencies = [
     "chromadb>=0.4.0",
     "pyyaml>=6.0",
+    "sentence-transformers>=2.2.0",
+    "torch>=2.0.0",
 ]
 
 [project.urls]
@@ -49,10 +51,8 @@ mempalace = "mempalace:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "build>=1.0", "twine>=4.0"]
-gpu = ["sentence-transformers>=2.2.0", "torch>=2.0.0"]
-# AMD ROCm: pip install torch --index-url https://download.pytorch.org/whl/rocm6.2
-# Then: pip install mempalace[gpu]
-# PyTorch ROCm maps to the same 'cuda' device internally
+# AMD ROCm: install torch with ROCm first, then pip install mempalace-gpu
+# pip install torch --index-url https://download.pytorch.org/whl/rocm6.2
 
 [tool.ruff]
 line-length = 100
