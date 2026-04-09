@@ -34,14 +34,14 @@ The MCP server includes a `mempalace_self_update` tool that pulls the latest ver
 
 ## Performance
 
-Tested on two real-world codebases on NVIDIA CUDA. Same files, same drawers — only the device changes.
+Tested on two real-world codebases. GPU: **NVIDIA GeForce RTX 4080 SUPER**. Same files, same drawers — only the device changes.
 
-| Test | Files | Drawers | Size | CPU | GPU | Speedup |
-|------|-------|---------|------|-----|-----|---------|
+| Test | Files | Drawers | Size | CPU | RTX 4080 SUPER | Speedup |
+|------|-------|---------|------|-----|----------------|---------|
 | Large mixed codebase (JS/TS/Dart/Python/HTML) | 118 | 13,673 | ~1.7 GB | 156.7s | 26.3s | **6.0x** |
 | Medium Flutter app (Dart/YAML/JSON) | 145 | 2,906 | ~85 MB | 37.3s | 10.7s | **3.5x** |
 
-Speedup scales with drawer count. More chunks = more embedding work = bigger GPU advantage.
+Speedup scales with drawer count. More chunks = more embedding work = bigger GPU advantage. Results will vary by GPU — expect similar gains on any modern NVIDIA/AMD/Apple Silicon GPU.
 
 ---
 
