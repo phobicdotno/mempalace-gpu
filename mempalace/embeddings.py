@@ -61,12 +61,11 @@ def _detect_device(preference: str = "auto") -> str:
             return "mps"
         return "cpu"
 
-    # Auto-detect: prefer CUDA/ROCm > MPS > CPU
+    # Auto-detect: CUDA/ROCm > CPU (skip MPS — benchmarks show MPS is ~2x slower
+    # than CPU for small embedding batches on Apple Silicon due to data transfer overhead)
     if preference == "auto":
         if torch.cuda.is_available():
             return "cuda"
-        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-            return "mps"
 
     return "cpu"
 
