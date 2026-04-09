@@ -1,12 +1,14 @@
 import os
 import shutil
 import tempfile
+import time
 from pathlib import Path
 
 import chromadb
 import yaml
 
 from mempalace.miner import mine, scan_project
+from mempalace.palace import file_already_mined
 
 
 def write_file(path: Path, content: str):
@@ -342,3 +344,54 @@ def test_sync_on_empty_palace():
         assert os.path.join(tmpdir, "file1.py") in source_files
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_file_already_mined_check_mtime():
+    tmpdir = tempfile.mkdtemp()
+    try:
+        palace_path = os.path.join(tmpdir, "palace")
+        os.makedirs(palace_path)
+        client = chromadb.PersistentClient(path=palace_path)
+        col = client.get_or_create_collection("mempalace_drawers")
+
+        test_file = os.path.join(tmpdir, "test.txt")
+        with open(test_file, "w") as f:
+            f.write("hello world")
+
+        mtime = os.path.getmtime(test_file)
+
+        # Not mined yet
+        assert file_already_mined(col, test_file) is False
+        assert file_already_mined(col, test_file, check_mtime=True) is False
+
+        # Add it with mtime
+        col.add(
+            ids=["d1"],
+            documents=["hello world"],
+            metadatas=[{"source_file": test_file, "source_mtime": str(mtime)}],
+        )
+
+        # Already mined (no mtime check)
+        assert file_already_mined(col, test_file) is True
+        # Already mined (mtime matches)
+        assert file_already_mined(col, test_file, check_mtime=True) is True
+
+        # Modify file so mtime changes
+        time.sleep(0.1)
+        with open(test_file, "w") as f:
+            f.write("modified content")
+
+        # Still mined without mtime check
+        assert file_already_mined(col, test_file) is True
+        # Needs re-mining with mtime check
+        assert file_already_mined(col, test_file, check_mtime=True) is False
+
+        # Record with no mtime stored should return False for check_mtime
+        col.add(
+            ids=["d2"],
+            documents=["other"],
+            metadatas=[{"source_file": "/fake/no_mtime.txt"}],
+        )
+        assert file_already_mined(col, "/fake/no_mtime.txt", check_mtime=True) is False
+    finally:
+        shutil.rmtree(tmpdir)
