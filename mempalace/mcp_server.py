@@ -437,6 +437,84 @@ def tool_diary_read(agent_name: str, last_n: int = 10):
         return {"error": str(e)}
 
 
+def tool_self_update(dry_run: bool = False):
+    """Update mempalace to the latest version from PyPI."""
+    import subprocess
+
+    # Get current version
+    try:
+        from mempalace import __version__
+
+        current = __version__
+    except ImportError:
+        current = "unknown"
+
+    pip_cmd = [sys.executable, "-m", "pip"]
+
+    # Check latest available version
+    latest = None
+    try:
+        result = subprocess.run(
+            pip_cmd + ["index", "versions", "mempalace"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode == 0 and result.stdout:
+            # Parse "mempalace (X.Y.Z)" from output
+            for line in result.stdout.splitlines():
+                if "mempalace" in line and "(" in line:
+                    latest = line.split("(")[1].split(")")[0].strip()
+                    break
+    except Exception:
+        pass
+
+    if dry_run:
+        return {
+            "current_version": current,
+            "latest_version": latest or "unknown (check PyPI)",
+            "up_to_date": current == latest if latest else "unknown",
+            "dry_run": True,
+            "message": "Run without dry_run to install the update.",
+        }
+
+    # Install update
+    try:
+        result = subprocess.run(
+            pip_cmd + ["install", "--upgrade", "mempalace"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode == 0:
+            # Get new version
+            check = subprocess.run(
+                pip_cmd + ["show", "mempalace"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            new_version = "unknown"
+            for line in check.stdout.splitlines():
+                if line.startswith("Version:"):
+                    new_version = line.split(":", 1)[1].strip()
+                    break
+            return {
+                "previous_version": current,
+                "new_version": new_version,
+                "updated": current != new_version,
+                "message": "Restart the MCP server to use the new version."
+                if current != new_version
+                else "Already up to date.",
+            }
+        else:
+            return {"error": f"pip install failed: {result.stderr.strip()}"}
+    except subprocess.TimeoutExpired:
+        return {"error": "Update timed out after 120 seconds."}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ==================== MCP PROTOCOL ====================
 
 TOOLS = {
@@ -685,6 +763,19 @@ TOOLS = {
             "required": ["agent_name"],
         },
         "handler": tool_diary_read,
+    },
+    "mempalace_self_update": {
+        "description": "Update mempalace to the latest version from PyPI. Like 'Update now' for the palace.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dry_run": {
+                    "type": "boolean",
+                    "description": "If true, only check for updates without installing (default: false)",
+                },
+            },
+        },
+        "handler": lambda **kwargs: tool_self_update(**kwargs),
     },
 }
 
