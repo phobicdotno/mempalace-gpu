@@ -104,7 +104,7 @@ class MempalaceConfig:
 
     @property
     def device(self):
-        """Embedding device: auto (detect GPU), cuda, or cpu."""
+        """Embedding device: auto (detect GPU), cuda, rocm, mps, or cpu."""
         env_val = os.environ.get("MEMPALACE_DEVICE")
         if env_val:
             return env_val

@@ -12,7 +12,7 @@ def test_detect_device_auto():
     from mempalace.embeddings import _detect_device
 
     device = _detect_device("auto")
-    assert device in ("cpu", "cuda")
+    assert device in ("cpu", "cuda", "mps")
 
 
 def test_detect_device_rocm():

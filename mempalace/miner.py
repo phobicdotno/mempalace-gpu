@@ -37,6 +37,7 @@ READABLE_EXTENSIONS = {
     ".csv",
     ".sql",
     ".toml",
+    ".dart",
 }
 
 SKIP_DIRS = {
@@ -540,7 +541,9 @@ def status(palace_path: str):
     """Show what's been filed in the palace."""
     try:
         client = chromadb.PersistentClient(path=palace_path)
-        col = client.get_collection("mempalace_drawers")
+        from .embeddings import get_collection as _emb_get_collection
+
+        col = _emb_get_collection(client, "mempalace_drawers")
     except Exception:
         print(f"\n  No palace found at {palace_path}")
         print("  Run: mempalace init <dir> then mempalace mine <dir>")

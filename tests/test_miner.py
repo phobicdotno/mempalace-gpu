@@ -2,7 +2,6 @@ import os
 import tempfile
 import shutil
 import yaml
-import chromadb
 from mempalace.miner import mine, update, get_collection
 
 
@@ -29,8 +28,7 @@ def test_project_mining():
     mine(tmpdir, palace_path)
 
     # Verify
-    client = chromadb.PersistentClient(path=palace_path)
-    col = client.get_collection("mempalace_drawers")
+    col = get_collection(palace_path)
     assert col.count() > 0
 
     shutil.rmtree(tmpdir)
