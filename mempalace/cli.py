@@ -64,6 +64,8 @@ def cmd_init(args):
 
 
 def cmd_mine(args):
+    from .embeddings import init as init_embeddings
+    init_embeddings(args.device)
     palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
 
     if args.mode == "convos":
@@ -151,6 +153,7 @@ def cmd_compress(args):
     """Compress drawers in a wing using AAAK Dialect."""
     import chromadb
     from .dialect import Dialect
+    from .embeddings import get_collection as _emb_get_collection
 
     palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
 
@@ -171,7 +174,7 @@ def cmd_compress(args):
     # Connect to palace
     try:
         client = chromadb.PersistentClient(path=palace_path)
-        col = client.get_collection("mempalace_drawers")
+        col = _emb_get_collection(client, "mempalace_drawers")
     except Exception:
         print(f"\n  No palace found at {palace_path}")
         print("  Run: mempalace init <dir> then mempalace mine <dir>")
@@ -231,7 +234,7 @@ def cmd_compress(args):
     # Store compressed versions (unless dry-run)
     if not args.dry_run:
         try:
-            comp_col = client.get_or_create_collection("mempalace_compressed")
+            comp_col = _emb_get_collection(client, "mempalace_compressed", create=True)
             for doc_id, compressed, meta, stats in compressed_entries:
                 comp_meta = dict(meta)
                 comp_meta["compression_ratio"] = round(stats["ratio"], 1)
@@ -303,6 +306,8 @@ def main():
         default="exchange",
         help="Extraction strategy for convos mode: 'exchange' (default) or 'general' (5 memory types)",
     )
+    p_mine.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto",
+                         help="Embedding device (default: auto-detect GPU)")
 
     # search
     p_search = sub.add_parser("search", help="Find anything, exact words")
