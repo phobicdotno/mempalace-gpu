@@ -325,9 +325,9 @@ def main():
     )
     p_mine.add_argument(
         "--device",
-        choices=["auto", "cuda", "cpu"],
+        choices=["auto", "cuda", "rocm", "mps", "cpu"],
         default="auto",
-        help="Embedding device (default: auto-detect GPU)",
+        help="Embedding device: auto, cuda (NVIDIA), rocm (AMD), mps (Apple), cpu",
     )
 
     # update
@@ -340,9 +340,9 @@ def main():
     )
     p_update.add_argument(
         "--device",
-        choices=["auto", "cuda", "cpu"],
+        choices=["auto", "cuda", "rocm", "mps", "cpu"],
         default="auto",
-        help="Embedding device (default: auto-detect GPU)",
+        help="Embedding device: auto, cuda (NVIDIA), rocm (AMD), mps (Apple), cpu",
     )
 
     # search

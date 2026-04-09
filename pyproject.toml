@@ -47,6 +47,9 @@ mempalace = "mempalace:main"
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "build>=1.0", "twine>=4.0"]
 gpu = ["sentence-transformers>=2.2.0", "torch>=2.0.0"]
+# AMD ROCm: pip install torch --index-url https://download.pytorch.org/whl/rocm6.2
+# Then: pip install mempalace[gpu]
+# PyTorch ROCm maps to the same 'cuda' device internally
 
 [tool.ruff]
 line-length = 100

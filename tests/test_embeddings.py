@@ -15,6 +15,29 @@ def test_detect_device_auto():
     assert device in ("cpu", "cuda")
 
 
+def test_detect_device_rocm():
+    from mempalace.embeddings import _detect_device
+
+    # rocm maps to 'cuda' (PyTorch ROCm compatibility layer) or 'cpu' if no GPU
+    device = _detect_device("rocm")
+    assert device in ("cpu", "cuda")
+
+
+def test_detect_device_mps():
+    from mempalace.embeddings import _detect_device
+
+    # mps resolves to 'mps' on Apple Silicon or 'cpu' elsewhere
+    device = _detect_device("mps")
+    assert device in ("cpu", "mps")
+
+
+def test_detect_gpu_vendor():
+    from mempalace.embeddings import _detect_gpu_vendor
+
+    vendor = _detect_gpu_vendor()
+    assert vendor in ("nvidia", "amd", "apple", "none")
+
+
 def test_get_embedding_function_no_crash():
     from mempalace.embeddings import get_embedding_function
 

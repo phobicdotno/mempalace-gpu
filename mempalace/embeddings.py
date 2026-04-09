@@ -1,7 +1,8 @@
 """
 Shared embedding function factory for MemPalace.
 
-Creates a SentenceTransformer embedding function with CUDA support when available.
+Creates a SentenceTransformer embedding function with GPU support when available.
+Supports NVIDIA (CUDA), AMD (ROCm), and Apple Silicon (MPS) GPUs.
 Falls back to ChromaDB's default ONNX embedder when sentence-transformers is not installed.
 """
 
@@ -16,23 +17,71 @@ _cached_ef = None
 _cached_device = None
 
 
+def _detect_gpu_vendor() -> str:
+    """Detect GPU vendor. Returns 'nvidia', 'amd', 'apple', or 'none'."""
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            if hasattr(torch.version, "hip") and torch.version.hip is not None:
+                return "amd"
+            return "nvidia"
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return "apple"
+        return "none"
+    except ImportError:
+        return "none"
+
+
 def _detect_device(preference: str = "auto") -> str:
+    """Detect the best available device for embeddings.
+
+    Args:
+        preference: 'auto' (detect best GPU), 'cuda', 'rocm', 'mps', or 'cpu'
+
+    Returns:
+        'cuda' (NVIDIA/AMD), 'mps' (Apple Silicon), or 'cpu'
+    """
     if preference == "cpu":
         return "cpu"
-    if preference in ("cuda", "auto"):
-        try:
-            import torch
 
-            if torch.cuda.is_available():
-                return "cuda"
-        except ImportError:
-            pass
+    try:
+        import torch
+    except ImportError:
+        return "cpu"
+
+    # Explicit device requests
+    if preference in ("cuda", "rocm"):
+        if torch.cuda.is_available():
+            return "cuda"
+        return "cpu"
+
+    if preference == "mps":
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return "mps"
+        return "cpu"
+
+    # Auto-detect: prefer CUDA/ROCm > MPS > CPU
+    if preference == "auto":
+        if torch.cuda.is_available():
+            return "cuda"
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return "mps"
+
     return "cpu"
+
+
+_GPU_LABELS = {
+    "nvidia": "NVIDIA CUDA",
+    "amd": "AMD ROCm",
+    "apple": "Apple MPS",
+}
 
 
 def get_embedding_function(device: str = "auto"):
     """Get or create a cached embedding function for ChromaDB.
 
+    Supports NVIDIA (CUDA), AMD (ROCm), and Apple Silicon (MPS) GPUs.
     Returns SentenceTransformerEmbeddingFunction when available, None otherwise.
     """
     global _cached_ef, _cached_device
@@ -47,7 +96,12 @@ def get_embedding_function(device: str = "auto"):
             model_name=DEFAULT_MODEL,
             device=resolved,
         )
-        logger.info(f"Embeddings: SentenceTransformer on {resolved}")
+        if resolved in ("cuda", "mps"):
+            vendor = _detect_gpu_vendor()
+            label = _GPU_LABELS.get(vendor, resolved.upper())
+            logger.info(f"Embeddings: SentenceTransformer on {label}")
+        else:
+            logger.info("Embeddings: SentenceTransformer on CPU")
         _cached_ef = ef
         _cached_device = resolved
         return ef

@@ -2,7 +2,7 @@
 
 > GPU-accelerated fork of [milla-jovovich/mempalace](https://github.com/milla-jovovich/mempalace)
 
-This fork adds CUDA/GPU-accelerated embeddings and batch processing to MemPalace. For documentation on MemPalace itself (palace structure, AAAK dialect, MCP tools, benchmarks), see the [upstream README](https://github.com/milla-jovovich/mempalace#readme).
+This fork adds GPU-accelerated embeddings and batch processing to MemPalace. Supports **NVIDIA (CUDA)**, **AMD (ROCm)**, and **Apple Silicon (MPS)**. For documentation on MemPalace itself (palace structure, AAAK dialect, MCP tools, benchmarks), see the [upstream README](https://github.com/milla-jovovich/mempalace#readme).
 
 ---
 
@@ -10,14 +10,15 @@ This fork adds CUDA/GPU-accelerated embeddings and batch processing to MemPalace
 
 ### GPU-accelerated embeddings
 
-Embeddings are computed via `sentence-transformers` on CUDA when available, falling back to ChromaDB's default CPU/ONNX model when not.
+Embeddings are computed via `sentence-transformers` on GPU when available, falling back to ChromaDB's default CPU/ONNX model when not.
 
 ```bash
-pip install mempalace[gpu]          # installs sentence-transformers + torch
-mempalace mine ~/myproject --device cuda
+mempalace mine ~/myproject --device auto    # auto-detect best GPU
+mempalace mine ~/myproject --device cuda    # NVIDIA
+mempalace mine ~/myproject --device rocm    # AMD
+mempalace mine ~/myproject --device mps     # Apple Silicon (M1-M5)
+mempalace mine ~/myproject --device cpu     # force CPU
 ```
-
-`--device` options: `auto` (default, detect GPU), `cuda`, `cpu`
 
 Also configurable via `MEMPALACE_DEVICE` env var or `"device"` in `~/.mempalace/config.json`.
 
@@ -33,7 +34,7 @@ The MCP server includes a `mempalace_self_update` tool that pulls the latest ver
 
 ## Performance
 
-Tested on two real-world codebases. Same files, same drawers — only the device changes.
+Tested on two real-world codebases on NVIDIA CUDA. Same files, same drawers — only the device changes.
 
 | Test | Files | Drawers | Size | CPU | GPU | Speedup |
 |------|-------|---------|------|-----|-----|---------|
@@ -50,11 +51,33 @@ Speedup scales with drawer count. More chunks = more embedding work = bigger GPU
 # Clone this fork
 git clone https://github.com/phobicdotno/mempalace-gpu.git
 cd mempalace-gpu
+```
 
-# Install with GPU support
+### NVIDIA (CUDA)
+
+```bash
 pip install -e ".[gpu]"
+```
 
-# Or without GPU (still gets batch processing)
+### AMD (ROCm)
+
+```bash
+# Install PyTorch with ROCm first
+pip install torch --index-url https://download.pytorch.org/whl/rocm6.2
+# Then install mempalace with GPU extras
+pip install -e ".[gpu]"
+```
+
+### Apple Silicon (MPS)
+
+```bash
+# PyTorch ships with MPS support on macOS by default
+pip install -e ".[gpu]"
+```
+
+### CPU only (still gets batch processing)
+
+```bash
 pip install -e .
 ```
 
@@ -72,10 +95,10 @@ git merge upstream/main
 
 | File | Change |
 |------|--------|
-| `mempalace/embeddings.py` | **New** -- shared embedding function factory, device detection, batch flush |
+| `mempalace/embeddings.py` | **New** -- GPU detection (NVIDIA/AMD/Apple), embedding factory, batch flush |
 | `mempalace/miner.py` | Batched `collection.add()`, content hashing, `update()` command |
 | `mempalace/convo_miner.py` | Batched `collection.add()` |
-| `mempalace/config.py` | `device` property (auto/cuda/cpu) |
+| `mempalace/config.py` | `device` property (auto/cuda/rocm/mps/cpu) |
 | `mempalace/cli.py` | `--device` flag, `update` subcommand |
 | `mempalace/mcp_server.py` | `mempalace_self_update` tool, shared embeddings |
 | `mempalace/searcher.py` | Shared embedding function for vector compatibility |
