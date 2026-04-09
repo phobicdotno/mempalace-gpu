@@ -49,9 +49,10 @@ Speedup scales with drawer count. More chunks = more embedding work = bigger GPU
 
 ```bash
 pip install mempalace-gpu
+claude mcp add mempalace-gpu -- python -m mempalace.mcp_server
 ```
 
-That's it. Works on NVIDIA, AMD, and Apple Silicon — GPU is auto-detected.
+Restart Claude Code — `mempalace-gpu` appears in `/plugin` with all tools. Works on NVIDIA, AMD, and Apple Silicon — GPU is auto-detected.
 
 ### AMD (ROCm) note
 
