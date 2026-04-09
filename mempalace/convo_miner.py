@@ -306,6 +306,8 @@ def mine_convos(
         except Exception:
             continue
 
+        content_hash = hashlib.md5(content.encode()).hexdigest()
+
         if not content or len(content.strip()) < MIN_CHUNK_SIZE:
             continue
 
@@ -367,6 +369,7 @@ def mine_convos(
                         "filed_at": datetime.now().isoformat(),
                         "ingest_mode": "convos",
                         "extract_mode": extract_mode,
+                        "content_hash": content_hash,
                     },
                 }
             )
