@@ -43,6 +43,19 @@ Tested on two real-world codebases. GPU: **NVIDIA GeForce RTX 4080 SUPER**. Same
 
 Speedup scales with drawer count. More chunks = more embedding work = bigger GPU advantage. Results will vary by GPU — expect similar gains on any modern NVIDIA/AMD/Apple Silicon GPU.
 
+### Apple Silicon (M1)
+
+Tested on MacBook M1. Key finding: **CPU outperforms MPS for mining** due to data transfer overhead with small embedding batches.
+
+| Test | Files | Drawers | MPS (GPU) | CPU | Winner |
+|------|-------|---------|-----------|-----|--------|
+| ~/Documents (mixed files) | 500 | 1,239 | 5:48 | 6:09 | MPS 1.06x |
+| ~/phobic (mixed files) | 500 | 8,886 | 17:16 | **8:28** | **CPU 2.0x** |
+
+MPS uses 12x less CPU (5-6% vs 60-69%), freeing the processor for other work — but wall-clock time is worse. The fork defaults to CPU on Apple Silicon for this reason. Use `--device mps` to override.
+
+Full results: [benchmarks/apple_m1_results.md](benchmarks/apple_m1_results.md)
+
 ---
 
 ## Installation
@@ -85,6 +98,40 @@ git merge upstream/main
 
 ---
 
+## Remote GPU server
+
+Run your palace on a GPU machine and access it from any device over the network.
+
+### Server
+
+```bash
+pip install mempalace-gpu[serve]
+mempalace serve --port 8420 --token <your-token> --device cuda
+```
+
+### Client (MCP proxy)
+
+On your local machine, add a proxy that forwards MCP calls to the remote server:
+
+```bash
+claude mcp add mempalace-remote \
+  -e MEMPALACE_REMOTE_URL=http://<gpu-host>:8420 \
+  -e MEMPALACE_TOKEN=<your-token> \
+  -- python -m mempalace.mcp_proxy
+```
+
+The proxy speaks MCP stdio to Claude Code and HTTP to the server. All tool calls are forwarded transparently.
+
+### Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | /health | No | Server status |
+| GET | /tools | Yes | List available tools |
+| POST | /tool/{name} | Yes | Call a tool with JSON body |
+
+---
+
 ## Changes from upstream
 
 | File | Change |
@@ -98,6 +145,8 @@ git merge upstream/main
 | `mempalace/searcher.py` | Shared embedding function for vector compatibility |
 | `mempalace/layers.py` | Shared embedding function |
 | `mempalace/palace_graph.py` | Shared embedding function |
+| `mempalace/http_server.py` | **New** -- FastAPI HTTP server for remote GPU access |
+| `mempalace/mcp_proxy.py` | **New** -- MCP-to-HTTP proxy for remote palace access |
 | `pyproject.toml` | `gpu` optional dependency group |
 
 All other files are unmodified from upstream. Existing palaces remain compatible.
