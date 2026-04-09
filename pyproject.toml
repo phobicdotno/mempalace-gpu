@@ -3,18 +3,19 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mempalace"
+name = "mempalace-gpu"
 version = "3.1.0"
-description = "Give your AI a memory — mine projects and conversations into a searchable palace. No API key required."
+description = "GPU-accelerated fork of mempalace — NVIDIA CUDA, AMD ROCm, Apple MPS. 3-6x faster mining."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
 authors = [
-    {name = "milla-jovovich"},
+    {name = "phobicdotno"},
 ]
 keywords = [
     "ai", "memory", "llm", "rag", "chromadb", "mcp",
     "vector-database", "claude", "chatgpt", "embeddings",
+    "gpu", "cuda", "rocm", "mps", "apple-silicon",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -34,14 +35,16 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/milla-jovovich/mempalace"
-Repository = "https://github.com/milla-jovovich/mempalace"
-"Bug Tracker" = "https://github.com/milla-jovovich/mempalace/issues"
+Homepage = "https://github.com/phobicdotno/mempalace-gpu"
+Repository = "https://github.com/phobicdotno/mempalace-gpu"
+"Bug Tracker" = "https://github.com/phobicdotno/mempalace-gpu/issues"
+"Upstream" = "https://github.com/milla-jovovich/mempalace"
 
 [tool.setuptools.packages.find]
 include = ["mempalace*"]
 
 [project.scripts]
+mempalace-gpu = "mempalace:main"
 mempalace = "mempalace:main"
 
 [project.optional-dependencies]
