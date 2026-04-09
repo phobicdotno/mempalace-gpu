@@ -142,6 +142,20 @@ def cmd_split(args):
         sys.argv = old_argv
 
 
+def cmd_update(args):
+    from .embeddings import init as init_embeddings
+    init_embeddings(args.device)
+    palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
+    from .miner import update
+    update(
+        project_dir=args.dir,
+        palace_path=palace_path,
+        wing_override=args.wing,
+        agent=args.agent,
+        dry_run=args.dry_run,
+    )
+
+
 def cmd_status(args):
     from .miner import status
 
@@ -309,6 +323,15 @@ def main():
     p_mine.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto",
                          help="Embedding device (default: auto-detect GPU)")
 
+    # update
+    p_update = sub.add_parser("update", help="Incremental update — sync palace with file changes")
+    p_update.add_argument("dir", help="Project directory to update")
+    p_update.add_argument("--wing", default=None, help="Wing name (default: from config)")
+    p_update.add_argument("--agent", default="mempalace", help="Your name (default: mempalace)")
+    p_update.add_argument("--dry-run", action="store_true", help="Show what would change without changing")
+    p_update.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto",
+                           help="Embedding device (default: auto-detect GPU)")
+
     # search
     p_search = sub.add_parser("search", help="Find anything, exact words")
     p_search.add_argument("query", help="What to search for")
@@ -367,6 +390,7 @@ def main():
     dispatch = {
         "init": cmd_init,
         "mine": cmd_mine,
+        "update": cmd_update,
         "split": cmd_split,
         "search": cmd_search,
         "compress": cmd_compress,

@@ -252,6 +252,8 @@ def process_file(
     if len(content) < MIN_CHUNK_SIZE:
         return []
 
+    content_hash = hashlib.md5(content.encode()).hexdigest()
+
     room = detect_room(filepath, content, rooms, project_path)
     chunks = chunk_text(content, source_file)
 
@@ -270,6 +272,7 @@ def process_file(
                 "room": room,
                 "source_file": source_file,
                 "chunk_index": chunk["chunk_index"],
+                "content_hash": content_hash,
                 "added_by": agent,
                 "filed_at": datetime.now().isoformat(),
             }
@@ -392,6 +395,156 @@ def mine(
     for room, count in sorted(room_counts.items(), key=lambda x: x[1], reverse=True):
         print(f"    {room:20} {count} files")
     print('\n  Next: mempalace search "what you\'re looking for"')
+    print(f"{'=' * 55}\n")
+
+
+# =============================================================================
+# INCREMENTAL UPDATE
+# =============================================================================
+
+
+def update(
+    project_dir: str,
+    palace_path: str,
+    wing_override: str = None,
+    agent: str = "mempalace",
+    dry_run: bool = False,
+):
+    """Incremental update: sync palace with current file state."""
+    from .embeddings import flush_batch, BATCH_SIZE
+
+    project_path = Path(project_dir).expanduser().resolve()
+    config = load_config(project_dir)
+    wing = wing_override or config["wing"]
+    rooms = config.get("rooms", [{"name": "general", "description": "All project files"}])
+
+    # Get current files on disk
+    disk_files = scan_project(project_dir)
+    disk_paths = {str(f) for f in disk_files}
+
+    print(f"\n{'=' * 55}")
+    print("  MemPalace Update")
+    print(f"{'=' * 55}")
+    print(f"  Wing:    {wing}")
+    print(f"  Files:   {len(disk_files)} on disk")
+    print(f"  Palace:  {palace_path}")
+    if dry_run:
+        print("  DRY RUN — nothing will change")
+    print(f"{'─' * 55}\n")
+
+    collection = get_collection(palace_path)
+
+    # Get all drawers in this wing from the palace
+    try:
+        results = collection.get(
+            where={"wing": wing},
+            include=["metadatas"],
+            limit=100000,
+        )
+    except Exception:
+        results = {"ids": [], "metadatas": []}
+
+    # Build map: source_file -> {ids: [...], content_hash: str}
+    palace_files = defaultdict(lambda: {"ids": [], "content_hash": None})
+    for drawer_id, meta in zip(results["ids"], results["metadatas"]):
+        sf = meta.get("source_file", "")
+        palace_files[sf]["ids"].append(drawer_id)
+        if meta.get("content_hash"):
+            palace_files[sf]["content_hash"] = meta["content_hash"]
+
+    palace_paths = set(palace_files.keys())
+
+    # Classify files
+    new_files = []
+    changed_files = []
+    deleted_paths = palace_paths - disk_paths
+    unchanged = 0
+
+    for filepath in disk_files:
+        source_file = str(filepath)
+        if source_file not in palace_paths:
+            new_files.append(filepath)
+        else:
+            # Check if content changed
+            try:
+                content = filepath.read_text(encoding="utf-8", errors="replace").strip()
+                current_hash = hashlib.md5(content.encode()).hexdigest()
+            except Exception:
+                continue
+            stored_hash = palace_files[source_file]["content_hash"]
+            if stored_hash and stored_hash == current_hash:
+                unchanged += 1
+            else:
+                changed_files.append(filepath)
+
+    print(f"  New:       {len(new_files)}")
+    print(f"  Changed:   {len(changed_files)}")
+    print(f"  Deleted:   {len(deleted_paths)}")
+    print(f"  Unchanged: {unchanged}")
+    print()
+
+    if not new_files and not changed_files and not deleted_paths:
+        print("  Everything up to date.")
+        print(f"{'=' * 55}\n")
+        return
+
+    # 1. Remove drawers for deleted files
+    if deleted_paths:
+        for sf in deleted_paths:
+            ids = palace_files[sf]["ids"]
+            if dry_run:
+                print(f"    [DRY RUN] DELETE {Path(sf).name} ({len(ids)} drawers)")
+            else:
+                collection.delete(ids=ids)
+                print(f"  ✗ Removed {Path(sf).name} ({len(ids)} drawers)")
+
+    # 2. Remove old drawers for changed files
+    if changed_files:
+        for filepath in changed_files:
+            sf = str(filepath)
+            ids = palace_files[sf]["ids"]
+            if not dry_run:
+                collection.delete(ids=ids)
+
+    # 3. Mine new + changed files
+    files_to_mine = new_files + changed_files
+    if files_to_mine:
+        pending = []
+        total_drawers = 0
+        for i, filepath in enumerate(files_to_mine, 1):
+            label = "NEW" if filepath in new_files else "UPD"
+            drawers = process_file(
+                filepath=filepath,
+                project_path=project_path,
+                collection=collection,
+                wing=wing,
+                rooms=rooms,
+                agent=agent,
+                dry_run=dry_run,
+            )
+            if not drawers:
+                continue
+            total_drawers += len(drawers)
+            if dry_run:
+                print(f"    [DRY RUN] {label} {filepath.name} ({len(drawers)} drawers)")
+            else:
+                pending.extend(drawers)
+                if len(pending) >= BATCH_SIZE:
+                    flush_batch(collection, pending)
+                    print(f"  ✓ Batch flushed — {len(pending)} drawers")
+                    pending = []
+
+        if pending and not dry_run:
+            flush_batch(collection, pending)
+            print(f"  ✓ Final batch — {len(pending)} drawers")
+
+        print(f"\n  Filed {total_drawers} drawers from {len(files_to_mine)} files")
+
+    deleted_count = sum(len(palace_files[sf]["ids"]) for sf in deleted_paths)
+    print(f"\n{'=' * 55}")
+    print("  Update complete.")
+    if deleted_paths:
+        print(f"  Removed: {deleted_count} drawers ({len(deleted_paths)} files)")
     print(f"{'=' * 55}\n")
 
 
