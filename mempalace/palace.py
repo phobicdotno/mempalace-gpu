@@ -19,6 +19,18 @@ SKIP_DIRS = {
     ".next",
     "coverage",
     ".mempalace",
+    ".ruff_cache",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".cache",
+    ".tox",
+    ".nox",
+    ".idea",
+    ".vscode",
+    ".ipynb_checkpoints",
+    ".eggs",
+    "htmlcov",
+    "target",
 }
 
 

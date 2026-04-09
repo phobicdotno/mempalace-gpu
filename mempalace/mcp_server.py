@@ -93,18 +93,17 @@ def _wal_log(operation: str, params: dict, result: dict = None):
         logger.error(f"WAL write failed: {e}")
 
 
-_client = None
+_client_cache = None
+_collection_cache = None
+_meta_cache = {"data": None, "timestamp": 0, "ttl": 30}  # 30 second TTL
 
 
 def _get_client():
     """Return a singleton ChromaDB PersistentClient."""
-    global _client
-    if _client is None:
-        _client = chromadb.PersistentClient(path=_config.palace_path)
-    return _client
-
-
-_meta_cache = {"data": None, "timestamp": 0, "ttl": 30}  # 30 second TTL
+    global _client_cache
+    if _client_cache is None:
+        _client_cache = chromadb.PersistentClient(path=_config.palace_path)
+    return _client_cache
 
 
 def _get_cached_metadata():
@@ -123,13 +122,13 @@ def _get_cached_metadata():
 
 def _get_collection(create=False):
     """Return the ChromaDB collection, caching the client between calls."""
-    global _client_cache, _collection_cache
+    global _collection_cache
     try:
-        _get_client()
+        client = _get_client()
         if create:
-            _collection_cache = _client_cache.get_or_create_collection(_config.collection_name)
+            _collection_cache = client.get_or_create_collection(_config.collection_name)
         elif _collection_cache is None:
-            _collection_cache = _client_cache.get_collection(_config.collection_name)
+            _collection_cache = client.get_collection(_config.collection_name)
         return _collection_cache
     except Exception:
         return None
