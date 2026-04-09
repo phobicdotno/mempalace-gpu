@@ -184,6 +184,7 @@ def get_collection(palace_path: str):
     os.makedirs(palace_path, exist_ok=True)
     client = chromadb.PersistentClient(path=palace_path)
     from .embeddings import get_collection as _emb_get_collection
+
     return _emb_get_collection(client, "mempalace_drawers", create=True)
 
 
@@ -194,33 +195,6 @@ def file_already_mined(collection, source_file: str) -> bool:
         return len(results.get("ids", [])) > 0
     except Exception:
         return False
-
-
-def add_drawer(
-    collection, wing: str, room: str, content: str, source_file: str, chunk_index: int, agent: str
-):
-    """Add one drawer to the palace."""
-    drawer_id = f"drawer_{wing}_{room}_{hashlib.md5((source_file + str(chunk_index)).encode()).hexdigest()[:16]}"
-    try:
-        collection.add(
-            documents=[content],
-            ids=[drawer_id],
-            metadatas=[
-                {
-                    "wing": wing,
-                    "room": room,
-                    "source_file": source_file,
-                    "chunk_index": chunk_index,
-                    "added_by": agent,
-                    "filed_at": datetime.now().isoformat(),
-                }
-            ],
-        )
-        return True
-    except Exception as e:
-        if "already exists" in str(e).lower() or "duplicate" in str(e).lower():
-            return False
-        raise
 
 
 # =============================================================================
@@ -264,19 +238,21 @@ def process_file(
     drawers = []
     for chunk in chunks:
         drawer_id = f"drawer_{wing}_{room}_{hashlib.md5((source_file + str(chunk['chunk_index'])).encode()).hexdigest()[:16]}"
-        drawers.append({
-            "id": drawer_id,
-            "document": chunk["content"],
-            "metadata": {
-                "wing": wing,
-                "room": room,
-                "source_file": source_file,
-                "chunk_index": chunk["chunk_index"],
-                "content_hash": content_hash,
-                "added_by": agent,
-                "filed_at": datetime.now().isoformat(),
+        drawers.append(
+            {
+                "id": drawer_id,
+                "document": chunk["content"],
+                "metadata": {
+                    "wing": wing,
+                    "room": room,
+                    "source_file": source_file,
+                    "chunk_index": chunk["chunk_index"],
+                    "content_hash": content_hash,
+                    "added_by": agent,
+                    "filed_at": datetime.now().isoformat(),
+                },
             }
-        })
+        )
     return drawers
 
 
@@ -370,20 +346,21 @@ def mine(
             files_skipped += 1
             continue
 
-        total_drawers += len(drawers)
-        room = detect_room(filepath, "", rooms, project_path)
-        room_counts[room] += 1
-
-        if not dry_run:
+        if dry_run:
+            total_drawers += len(drawers)
+            room = detect_room(filepath, "", rooms, project_path)
+        else:
+            room = drawers[0]["metadata"]["room"]
             pending.extend(drawers)
             if len(pending) >= BATCH_SIZE:
-                flush_batch(collection, pending)
+                total_drawers += flush_batch(collection, pending)
                 print(f"  ✓ Batch flushed — {len(pending)} drawers (file {i}/{len(files)})")
                 pending = []
+        room_counts[room] += 1
 
     # Flush remaining
     if pending and not dry_run:
-        flush_batch(collection, pending)
+        total_drawers += flush_batch(collection, pending)
         print(f"  ✓ Final batch — {len(pending)} drawers")
 
     print(f"\n{'=' * 55}")
@@ -432,16 +409,22 @@ def update(
         print("  DRY RUN — nothing will change")
     print(f"{'─' * 55}\n")
 
-    collection = get_collection(palace_path)
+    if not dry_run:
+        collection = get_collection(palace_path)
+    else:
+        collection = None
 
     # Get all drawers in this wing from the palace
-    try:
-        results = collection.get(
-            where={"wing": wing},
-            include=["metadatas"],
-            limit=100000,
-        )
-    except Exception:
+    if collection is not None:
+        try:
+            results = collection.get(
+                where={"wing": wing},
+                include=["metadatas"],
+                limit=100000,
+            )
+        except Exception:
+            results = {"ids": [], "metadatas": []}
+    else:
         results = {"ids": [], "metadatas": []}
 
     # Build map: source_file -> {ids: [...], content_hash: str}

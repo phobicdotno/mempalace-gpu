@@ -65,6 +65,7 @@ def cmd_init(args):
 
 def cmd_mine(args):
     from .embeddings import init as init_embeddings
+
     init_embeddings(args.device)
     palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
 
@@ -144,9 +145,11 @@ def cmd_split(args):
 
 def cmd_update(args):
     from .embeddings import init as init_embeddings
+
     init_embeddings(args.device)
     palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
     from .miner import update
+
     update(
         project_dir=args.dir,
         palace_path=palace_path,
@@ -320,17 +323,27 @@ def main():
         default="exchange",
         help="Extraction strategy for convos mode: 'exchange' (default) or 'general' (5 memory types)",
     )
-    p_mine.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto",
-                         help="Embedding device (default: auto-detect GPU)")
+    p_mine.add_argument(
+        "--device",
+        choices=["auto", "cuda", "cpu"],
+        default="auto",
+        help="Embedding device (default: auto-detect GPU)",
+    )
 
     # update
     p_update = sub.add_parser("update", help="Incremental update — sync palace with file changes")
     p_update.add_argument("dir", help="Project directory to update")
     p_update.add_argument("--wing", default=None, help="Wing name (default: from config)")
     p_update.add_argument("--agent", default="mempalace", help="Your name (default: mempalace)")
-    p_update.add_argument("--dry-run", action="store_true", help="Show what would change without changing")
-    p_update.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto",
-                           help="Embedding device (default: auto-detect GPU)")
+    p_update.add_argument(
+        "--dry-run", action="store_true", help="Show what would change without changing"
+    )
+    p_update.add_argument(
+        "--device",
+        choices=["auto", "cuda", "cpu"],
+        default="auto",
+        help="Embedding device (default: auto-detect GPU)",
+    )
 
     # search
     p_search = sub.add_parser("search", help="Find anything, exact words")

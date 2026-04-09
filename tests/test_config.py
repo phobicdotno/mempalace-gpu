@@ -35,13 +35,17 @@ def test_init():
 def test_device_default():
     import tempfile
     from mempalace.config import MempalaceConfig
+
     cfg = MempalaceConfig(config_dir=tempfile.mkdtemp())
     assert cfg.device == "auto"
 
 
 def test_device_from_config():
-    import tempfile, json, os
+    import tempfile
+    import json
+    import os
     from mempalace.config import MempalaceConfig
+
     tmpdir = tempfile.mkdtemp()
     with open(os.path.join(tmpdir, "config.json"), "w") as f:
         json.dump({"device": "cpu"}, f)
@@ -50,8 +54,10 @@ def test_device_from_config():
 
 
 def test_device_env_override():
-    import tempfile, os
+    import tempfile
+    import os
     from mempalace.config import MempalaceConfig
+
     os.environ["MEMPALACE_DEVICE"] = "cuda"
     try:
         cfg = MempalaceConfig(config_dir=tempfile.mkdtemp())

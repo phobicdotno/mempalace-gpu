@@ -213,6 +213,7 @@ def get_collection(palace_path: str):
     os.makedirs(palace_path, exist_ok=True)
     client = chromadb.PersistentClient(path=palace_path)
     from .embeddings import get_collection as _emb_get_collection
+
     return _emb_get_collection(client, "mempalace_drawers", create=True)
 
 
@@ -353,20 +354,22 @@ def mine_convos(
             if extract_mode == "general":
                 room_counts[chunk_room] += 1
             drawer_id = f"drawer_{wing}_{chunk_room}_{hashlib.md5((source_file + str(chunk['chunk_index'])).encode()).hexdigest()[:16]}"
-            pending.append({
-                "id": drawer_id,
-                "document": chunk["content"],
-                "metadata": {
-                    "wing": wing,
-                    "room": chunk_room,
-                    "source_file": source_file,
-                    "chunk_index": chunk["chunk_index"],
-                    "added_by": agent,
-                    "filed_at": datetime.now().isoformat(),
-                    "ingest_mode": "convos",
-                    "extract_mode": extract_mode,
+            pending.append(
+                {
+                    "id": drawer_id,
+                    "document": chunk["content"],
+                    "metadata": {
+                        "wing": wing,
+                        "room": chunk_room,
+                        "source_file": source_file,
+                        "chunk_index": chunk["chunk_index"],
+                        "added_by": agent,
+                        "filed_at": datetime.now().isoformat(),
+                        "ingest_mode": "convos",
+                        "extract_mode": extract_mode,
+                    },
                 }
-            })
+            )
 
         if len(pending) >= BATCH_SIZE:
             total_drawers += flush_batch(collection, pending)

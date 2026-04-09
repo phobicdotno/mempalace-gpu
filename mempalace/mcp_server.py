@@ -43,7 +43,9 @@ def _get_collection(create=False):
     """Return the ChromaDB collection, or None on failure."""
     try:
         client = chromadb.PersistentClient(path=_config.palace_path)
-        return _emb_get_collection(client, _config.collection_name, create=create, device=_config.device)
+        return _emb_get_collection(
+            client, _config.collection_name, create=create, device=_config.device
+        )
     except Exception:
         return None
 

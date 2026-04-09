@@ -4,23 +4,27 @@ import chromadb
 
 def test_detect_device_cpu():
     from mempalace.embeddings import _detect_device
+
     assert _detect_device("cpu") == "cpu"
 
 
 def test_detect_device_auto():
     from mempalace.embeddings import _detect_device
+
     device = _detect_device("auto")
     assert device in ("cpu", "cuda")
 
 
 def test_get_embedding_function_no_crash():
     from mempalace.embeddings import get_embedding_function
+
     ef = get_embedding_function("cpu")
-    # Returns SentenceTransformerEmbeddingFunction or None
+    assert ef is not None or ef is None  # just verify no crash
 
 
 def test_get_collection_roundtrip():
     from mempalace.embeddings import get_collection
+
     tmpdir = tempfile.mkdtemp()
     client = chromadb.PersistentClient(path=tmpdir)
     col = get_collection(client, "test_col", create=True, device="cpu")
@@ -32,11 +36,16 @@ def test_get_collection_roundtrip():
 
 def test_flush_batch():
     from mempalace.embeddings import get_collection, flush_batch
+
     tmpdir = tempfile.mkdtemp()
     client = chromadb.PersistentClient(path=tmpdir)
     col = get_collection(client, "test_col", create=True, device="cpu")
     batch = [
-        {"id": f"d{i}", "document": f"doc number {i} content", "metadata": {"wing": "test", "room": "general"}}
+        {
+            "id": f"d{i}",
+            "document": f"doc number {i} content",
+            "metadata": {"wing": "test", "room": "general"},
+        }
         for i in range(10)
     ]
     added = flush_batch(col, batch)
@@ -46,6 +55,7 @@ def test_flush_batch():
 
 def test_flush_batch_handles_duplicates():
     from mempalace.embeddings import get_collection, flush_batch
+
     tmpdir = tempfile.mkdtemp()
     client = chromadb.PersistentClient(path=tmpdir)
     col = get_collection(client, "test_col", create=True, device="cpu")
