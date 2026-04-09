@@ -12,17 +12,16 @@ import os
 import json
 import logging
 
+from mempalace import __version__
+
 logging.basicConfig(level=logging.INFO, format="%(message)s", stream=sys.stderr)
 logger = logging.getLogger("mempalace.mcp_proxy")
-
-from mempalace import __version__
 
 try:
     import httpx
 except ImportError:
     raise ImportError(
-        "httpx is required for the MCP proxy.\n"
-        "Install with: pip install mempalace-gpu[serve]"
+        "httpx is required for the MCP proxy.\nInstall with: pip install mempalace-gpu[serve]"
     )
 
 
@@ -113,9 +112,7 @@ def handle_request(request):
             return {
                 "jsonrpc": "2.0",
                 "id": req_id,
-                "result": {
-                    "content": [{"type": "text", "text": json.dumps(result, indent=2)}]
-                },
+                "result": {"content": [{"type": "text", "text": json.dumps(result, indent=2)}]},
             }
         except Exception as e:
             logger.error(f"Remote tool error {tool_name}: {e}")

@@ -8,24 +8,22 @@ Install: pip install mempalace-gpu[serve]
 Run:     mempalace serve --token SECRET --port 8420
 """
 
-import json
 import logging
 import os
+
+from . import __version__
+from .config import MempalaceConfig
 
 logger = logging.getLogger("mempalace.http_server")
 
 try:
     from fastapi import FastAPI, Header, HTTPException, Request
-    from fastapi.responses import JSONResponse
     import uvicorn
 except ImportError:
     raise ImportError(
         "FastAPI and uvicorn are required for HTTP server mode.\n"
         "Install with: pip install mempalace-gpu[serve]"
     )
-
-from . import __version__
-from .config import MempalaceConfig
 
 # Populated at startup
 _app_token: str = ""
@@ -35,6 +33,7 @@ _config = MempalaceConfig()
 def _get_tools():
     """Import TOOLS dict lazily to avoid circular imports."""
     from .mcp_server import TOOLS
+
     return {k: v for k, v in TOOLS.items() if k != "mempalace_self_update"}
 
 
@@ -44,7 +43,7 @@ def _check_auth(authorization: str = Header(None)):
         raise HTTPException(status_code=500, detail="Server misconfigured: no auth token set")
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-    token = authorization[len("Bearer "):]
+    token = authorization[len("Bearer ") :]
     if token != _app_token:
         raise HTTPException(status_code=401, detail="Invalid token")
 

@@ -36,7 +36,7 @@ def test_project_mining():
 
 def test_update_detects_changes():
     """Test that update finds new, changed, and deleted files."""
-    tmpdir = tempfile.mkdtemp()
+    tmpdir = os.path.realpath(tempfile.mkdtemp())
     # Create initial files
     with open(os.path.join(tmpdir, "file1.py"), "w") as f:
         f.write("# File 1\n" + "x = 1\n" * 20)
@@ -45,7 +45,7 @@ def test_update_detects_changes():
     with open(os.path.join(tmpdir, "mempalace.yaml"), "w") as f:
         yaml.dump({"wing": "test", "rooms": [{"name": "general", "description": "all"}]}, f)
 
-    palace = tempfile.mkdtemp()
+    palace = os.path.realpath(tempfile.mkdtemp())
     mine(tmpdir, palace)
 
     col = get_collection(palace)
