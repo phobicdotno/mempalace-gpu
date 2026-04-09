@@ -51,6 +51,7 @@ mempalace = "mempalace:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "build>=1.0", "twine>=4.0"]
+serve = ["fastapi>=0.100.0", "uvicorn[standard]>=0.23.0", "httpx>=0.24.0"]
 # AMD ROCm: install torch with ROCm first, then pip install mempalace-gpu
 # pip install torch --index-url https://download.pytorch.org/whl/rocm6.2
 

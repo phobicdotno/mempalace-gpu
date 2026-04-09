@@ -166,6 +166,17 @@ def cmd_status(args):
     status(palace_path=palace_path)
 
 
+def cmd_serve(args):
+    """Start the HTTP server for remote GPU access."""
+    token = args.token or os.environ.get("MEMPALACE_TOKEN", "")
+    if not token:
+        print("Error: --token is required (or set MEMPALACE_TOKEN env var)")
+        sys.exit(1)
+    from .http_server import start_server
+
+    start_server(host=args.host, port=args.port, token=token, device=args.device)
+
+
 def cmd_compress(args):
     """Compress drawers in a wing using AAAK Dialect."""
     import chromadb
@@ -391,6 +402,20 @@ def main():
         help="Only split files containing at least N sessions (default: 2)",
     )
 
+    # serve
+    p_serve = sub.add_parser("serve", help="Start HTTP server for remote GPU access")
+    p_serve.add_argument("--host", default="0.0.0.0", help="Bind address (default: 0.0.0.0)")
+    p_serve.add_argument("--port", type=int, default=8420, help="Port (default: 8420)")
+    p_serve.add_argument(
+        "--token", default=None, help="Auth token (required, or set MEMPALACE_TOKEN env var)"
+    )
+    p_serve.add_argument(
+        "--device",
+        choices=["auto", "cuda", "rocm", "mps", "cpu"],
+        default="auto",
+        help="Embedding device: auto, cuda (NVIDIA), rocm (AMD), mps (Apple), cpu",
+    )
+
     # status
     sub.add_parser("status", help="Show what's been filed")
 
@@ -408,6 +433,7 @@ def main():
         "search": cmd_search,
         "compress": cmd_compress,
         "wake-up": cmd_wakeup,
+        "serve": cmd_serve,
         "status": cmd_status,
     }
     dispatch[args.command](args)
