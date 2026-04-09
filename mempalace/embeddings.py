@@ -125,27 +125,47 @@ def get_collection(client, name: str, create: bool = False, device: str = "auto"
         kwargs["embedding_function"] = ef
     if create:
         return client.get_or_create_collection(**kwargs)
-    return client.get_collection(**kwargs)
+    try:
+        return client.get_collection(**kwargs)
+    except ValueError:
+        logger.warning(
+            "Embedding function mismatch for collection %s — falling back to default. "
+            "Search quality may be degraded if the collection was built with a different embedder.",
+            name,
+        )
+        return client.get_collection(name=name)
+
+
+CHROMA_MAX_BATCH = 5000  # Safe margin under ChromaDB's 5,461 hard limit
 
 
 def flush_batch(collection, batch: list) -> int:
-    """Add a batch of drawers to ChromaDB in one call.
+    """Add a batch of drawers to ChromaDB, chunked to stay under ChromaDB's max batch size.
 
     Falls back to one-at-a-time on duplicate errors. Returns count added.
     """
     if not batch:
         return 0
+    total_added = 0
+    for i in range(0, len(batch), CHROMA_MAX_BATCH):
+        chunk = batch[i : i + CHROMA_MAX_BATCH]
+        total_added += _flush_chunk(collection, chunk)
+    return total_added
+
+
+def _flush_chunk(collection, chunk: list) -> int:
+    """Add a single chunk (guaranteed <= CHROMA_MAX_BATCH) to ChromaDB."""
     try:
         collection.add(
-            ids=[d["id"] for d in batch],
-            documents=[d["document"] for d in batch],
-            metadatas=[d["metadata"] for d in batch],
+            ids=[d["id"] for d in chunk],
+            documents=[d["document"] for d in chunk],
+            metadatas=[d["metadata"] for d in chunk],
         )
-        return len(batch)
+        return len(chunk)
     except Exception as e:
         if "already exists" in str(e).lower() or "duplicate" in str(e).lower():
             added = 0
-            for d in batch:
+            for d in chunk:
                 try:
                     collection.add(
                         ids=[d["id"]], documents=[d["document"]], metadatas=[d["metadata"]]
