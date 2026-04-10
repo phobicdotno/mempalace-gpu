@@ -15,6 +15,7 @@ BATCH_SIZE = 100
 
 _cached_ef = None
 _cached_device = None
+_compatibility_checked = set()
 
 
 def _detect_gpu_vendor() -> str:
@@ -116,6 +117,44 @@ def init(device: str = "auto"):
     get_embedding_function(device)
 
 
+def verify_embedding_compatibility(collection, device="auto"):
+    """One-time check that the current embedder produces compatible vectors with the collection.
+
+    Embeds a known test string, queries the collection for nearest neighbors,
+    and checks if the L2 distance suggests compatible embedding spaces.
+    Returns True if compatible (or collection is empty), False if mismatch detected.
+    """
+    test_text = "The quick brown fox jumps over the lazy dog"
+    ef = get_embedding_function(device)
+    if ef is None:
+        return True  # Using default, always compatible
+
+    try:
+        current_vec = ef([test_text])[0]
+    except Exception:
+        return True  # Can't test, assume OK
+
+    try:
+        results = collection.query(query_embeddings=[current_vec], n_results=1)
+    except Exception:
+        return True  # Empty or broken collection
+
+    if not results.get("distances") or not results["distances"][0]:
+        return True  # Empty collection
+
+    distance = results["distances"][0][0]
+    if distance > 100.0:
+        logger.warning(
+            "Embedding compatibility check: nearest neighbor L2 distance %.2f suggests "
+            "vectors may be in different embedding spaces. Search quality may be degraded. "
+            "Consider re-mining with: mempalace mine <dir> --device %s",
+            distance,
+            device,
+        )
+        return False
+    return True
+
+
 def get_collection(client, name: str, create: bool = False, device: str = "auto"):
     """Get or create a ChromaDB collection with the shared embedding function."""
     ef = get_embedding_function(device)
@@ -132,7 +171,11 @@ def get_collection(client, name: str, create: bool = False, device: str = "auto"
             "Search quality may be degraded if the collection was built with a different embedder.",
             name,
         )
-        return client.get_collection(name=name)
+        col = client.get_collection(name=name)
+        if name not in _compatibility_checked:
+            verify_embedding_compatibility(col, device)
+            _compatibility_checked.add(name)
+        return col
 
 
 CHROMA_MAX_BATCH = 5000  # Safe margin under ChromaDB's 5,461 hard limit
