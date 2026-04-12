@@ -58,6 +58,21 @@ def _no_palace():
     }
 
 
+def _iter_all_metadata(col, where=None):
+    """Yield all metadata dicts from the collection, paginated in batches of 1000."""
+    total = col.count()
+    offset = 0
+    while offset < total:
+        kwargs = {"limit": 1000, "offset": offset, "include": ["metadatas"]}
+        if where:
+            kwargs["where"] = where
+        batch = col.get(**kwargs)
+        if not batch["ids"]:
+            break
+        yield from batch["metadatas"]
+        offset += len(batch["ids"])
+
+
 # ==================== READ TOOLS ====================
 
 
@@ -69,14 +84,13 @@ def tool_status():
     wings = {}
     rooms = {}
     try:
-        all_meta = col.get(include=["metadatas"])["metadatas"]
-        for m in all_meta:
+        for m in _iter_all_metadata(col):
             w = m.get("wing", "unknown")
             r = m.get("room", "unknown")
             wings[w] = wings.get(w, 0) + 1
             rooms[r] = rooms.get(r, 0) + 1
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"tool_status pagination error: {e}")
     return {
         "total_drawers": count,
         "wings": wings,
@@ -126,12 +140,11 @@ def tool_list_wings():
         return _no_palace()
     wings = {}
     try:
-        all_meta = col.get(include=["metadatas"])["metadatas"]
-        for m in all_meta:
+        for m in _iter_all_metadata(col):
             w = m.get("wing", "unknown")
             wings[w] = wings.get(w, 0) + 1
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"tool_list_wings pagination error: {e}")
     return {"wings": wings}
 
 
@@ -141,15 +154,12 @@ def tool_list_rooms(wing: str = None):
         return _no_palace()
     rooms = {}
     try:
-        kwargs = {"include": ["metadatas"]}
-        if wing:
-            kwargs["where"] = {"wing": wing}
-        all_meta = col.get(**kwargs)["metadatas"]
-        for m in all_meta:
+        where = {"wing": wing} if wing else None
+        for m in _iter_all_metadata(col, where=where):
             r = m.get("room", "unknown")
             rooms[r] = rooms.get(r, 0) + 1
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"tool_list_rooms pagination error: {e}")
     return {"wing": wing or "all", "rooms": rooms}
 
 
@@ -159,15 +169,14 @@ def tool_get_taxonomy():
         return _no_palace()
     taxonomy = {}
     try:
-        all_meta = col.get(include=["metadatas"])["metadatas"]
-        for m in all_meta:
+        for m in _iter_all_metadata(col):
             w = m.get("wing", "unknown")
             r = m.get("room", "unknown")
             if w not in taxonomy:
                 taxonomy[w] = {}
             taxonomy[w][r] = taxonomy[w].get(r, 0) + 1
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"tool_get_taxonomy pagination error: {e}")
     return {"taxonomy": taxonomy}
 
 
