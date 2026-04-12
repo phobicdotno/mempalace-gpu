@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-miner.py — Files everything into the palace.
+miner.py -- Files everything into the palace.
 
 Reads mempalace.yaml from the project directory to know the wing + rooms.
 Routes each file to the right room based on content.
@@ -83,7 +83,7 @@ def load_config(project_dir: str) -> dict:
 
 
 # =============================================================================
-# FILE ROUTING — which room does this file belong to?
+# FILE ROUTING -- which room does this file belong to?
 # =============================================================================
 
 
@@ -177,7 +177,7 @@ def chunk_text(content: str, source_file: str) -> list:
 
 
 # =============================================================================
-# PALACE — ChromaDB operations
+# PALACE -- ChromaDB operations
 # =============================================================================
 
 
@@ -233,7 +233,7 @@ def process_file(
     chunks = chunk_text(content, source_file)
 
     if dry_run:
-        print(f"    [DRY RUN] {filepath.name} → room:{room} ({len(chunks)} drawers)")
+        print(f"    [DRY RUN] {filepath.name} -> room:{room} ({len(chunks)} drawers)")
         return [{"dry_run": True} for _ in chunks]
 
     drawers = []
@@ -318,8 +318,8 @@ def mine(
     print(f"  Files:   {len(files)}")
     print(f"  Palace:  {palace_path}")
     if dry_run:
-        print("  DRY RUN — nothing will be filed")
-    print(f"{'─' * 55}\n")
+        print("  DRY RUN -- nothing will be filed")
+    print(f"{'-' * 55}\n")
 
     if not dry_run:
         collection = get_collection(palace_path)
@@ -355,14 +355,14 @@ def mine(
             pending.extend(drawers)
             if len(pending) >= BATCH_SIZE:
                 total_drawers += flush_batch(collection, pending)
-                print(f"  ✓ Batch flushed — {len(pending)} drawers (file {i}/{len(files)})")
+                print(f"  + Batch flushed -- {len(pending)} drawers (file {i}/{len(files)})")
                 pending = []
         room_counts[room] += 1
 
     # Flush remaining
     if pending and not dry_run:
         total_drawers += flush_batch(collection, pending)
-        print(f"  ✓ Final batch — {len(pending)} drawers")
+        print(f"  + Final batch -- {len(pending)} drawers")
 
     print(f"\n{'=' * 55}")
     print("  Done.")
@@ -407,8 +407,8 @@ def update(
     print(f"  Files:   {len(disk_files)} on disk")
     print(f"  Palace:  {palace_path}")
     if dry_run:
-        print("  DRY RUN — nothing will change")
-    print(f"{'─' * 55}\n")
+        print("  DRY RUN -- nothing will change")
+    print(f"{'-' * 55}\n")
 
     if not dry_run:
         collection = get_collection(palace_path)
@@ -480,7 +480,7 @@ def update(
                 print(f"    [DRY RUN] DELETE {Path(sf).name} ({len(ids)} drawers)")
             else:
                 collection.delete(ids=ids)
-                print(f"  ✗ Removed {Path(sf).name} ({len(ids)} drawers)")
+                print(f"  - Removed {Path(sf).name} ({len(ids)} drawers)")
 
     # 2. Remove old drawers for changed files
     if changed_files:
@@ -515,12 +515,12 @@ def update(
                 pending.extend(drawers)
                 if len(pending) >= BATCH_SIZE:
                     flush_batch(collection, pending)
-                    print(f"  ✓ Batch flushed — {len(pending)} drawers")
+                    print(f"  + Batch flushed -- {len(pending)} drawers")
                     pending = []
 
         if pending and not dry_run:
             flush_batch(collection, pending)
-            print(f"  ✓ Final batch — {len(pending)} drawers")
+            print(f"  + Final batch -- {len(pending)} drawers")
 
         print(f"\n  Filed {total_drawers} drawers from {len(files_to_mine)} files")
 
@@ -558,7 +558,7 @@ def status(palace_path: str):
         wing_rooms[m.get("wing", "?")][m.get("room", "?")] += 1
 
     print(f"\n{'=' * 55}")
-    print(f"  MemPalace Status — {len(metas)} drawers")
+    print(f"  MemPalace Status -- {len(metas)} drawers")
     print(f"{'=' * 55}\n")
     for wing, rooms in sorted(wing_rooms.items()):
         print(f"  WING: {wing}")
