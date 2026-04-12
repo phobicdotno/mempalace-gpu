@@ -181,12 +181,12 @@ def chunk_text(content: str, source_file: str) -> list:
 # =============================================================================
 
 
-def get_collection(palace_path: str):
+def get_collection(palace_path: str, device: str = "auto"):
     os.makedirs(palace_path, exist_ok=True)
     client = chromadb.PersistentClient(path=palace_path)
     from .embeddings import get_collection as _emb_get_collection
 
-    return _emb_get_collection(client, "mempalace_drawers", create=True)
+    return _emb_get_collection(client, "mempalace_drawers", create=True, device=device)
 
 
 def file_already_mined(collection, source_file: str) -> bool:

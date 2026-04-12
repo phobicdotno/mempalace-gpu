@@ -161,17 +161,20 @@ def get_collection(client, name: str, create: bool = False, device: str = "auto"
     kwargs = {"name": name}
     if ef is not None:
         kwargs["embedding_function"] = ef
-    if create:
-        return client.get_or_create_collection(**kwargs)
     try:
+        if create:
+            return client.get_or_create_collection(**kwargs)
         return client.get_collection(**kwargs)
     except ValueError:
         logger.warning(
-            "Embedding function mismatch for collection %s — falling back to default. "
+            "Embedding function mismatch for collection %s -- falling back to default. "
             "Search quality may be degraded if the collection was built with a different embedder.",
             name,
         )
-        col = client.get_collection(name=name)
+        if create:
+            col = client.get_or_create_collection(name=name)
+        else:
+            col = client.get_collection(name=name)
         if name not in _compatibility_checked:
             verify_embedding_compatibility(col, device)
             _compatibility_checked.add(name)
